@@ -1,0 +1,322 @@
+basePath: /
+definitions:
+  loan.AddInvestmentRequest:
+    properties:
+      amount:
+        type: number
+      email:
+        type: string
+      investorId:
+        type: string
+    required:
+    - amount
+    - email
+    - investorId
+    type: object
+  loan.ApproveLoanRequest:
+    properties:
+      proofUrl:
+        type: string
+      validatorId:
+        type: string
+    required:
+    - proofUrl
+    - validatorId
+    type: object
+  loan.CreateLoanRequest:
+    properties:
+      borrowerId:
+        type: string
+      principalAmount:
+        type: number
+      rate:
+        minimum: 0
+        type: number
+      roi:
+        minimum: 0
+        type: number
+    required:
+    - borrowerId
+    - principalAmount
+    - rate
+    - roi
+    type: object
+  loan.DisburseLoanRequest:
+    properties:
+      fieldOfficerId:
+        type: string
+      signedAgreement:
+        type: string
+    required:
+    - fieldOfficerId
+    - signedAgreement
+    type: object
+  loan.GenerateAgreementLetterRequest:
+    properties:
+      letterUrl:
+        type: string
+    required:
+    - letterUrl
+    type: object
+  response.Response:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data: {}
+      errors: {}
+      message:
+        example: OK
+        type: string
+    type: object
+info:
+  contact:
+    email: martinuz.dawan9@gmail.com
+    name: Martinus Dawan
+  description: API for managing loans
+  termsOfService: http://swagger.io/terms/
+  title: Loan Service API
+  version: "1.0"
+paths:
+  /loans:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new loan with the given borrower and loan details
+      parameters:
+      - description: Loan creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/loan.CreateLoanRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Loan created successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Invalid request or validation error
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Create a new loan
+      tags:
+      - loans
+  /loans/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a loan by its ID
+      parameters:
+      - description: Loan ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Loan details retrieved successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Loan not found
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Get loan by ID
+      tags:
+      - loans
+  /loans/{id}/agreement:
+    post:
+      consumes:
+      - application/json
+      description: Generates an agreement letter for a loan
+      parameters:
+      - description: Loan ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Agreement letter details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/loan.GenerateAgreementLetterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Agreement letter generated successfully
+          schema:
+            type: string
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+      summary: Generate agreement letter
+      tags:
+      - loans
+  /loans/{id}/approve:
+    post:
+      consumes:
+      - application/json
+      description: Approves a loan with validator details
+      parameters:
+      - description: Loan ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Loan approval request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/loan.ApproveLoanRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Loan approved successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Invalid request or state validation error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Approve a loan
+      tags:
+      - loans
+  /loans/{id}/disburse:
+    post:
+      consumes:
+      - application/json
+      description: Disburses an approved and invested loan
+      parameters:
+      - description: Loan ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Disbursement details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/loan.DisburseLoanRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Loan disbursed successfully
+          schema:
+            type: string
+        "400":
+          description: Invalid request or state validation error
+          schema:
+            type: string
+      tags:
+      - loans
+  /loans/{id}/invest:
+    post:
+      consumes:
+      - application/json
+      description: Adds an investment to an existing loan
+      parameters:
+      - description: Loan ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Investment details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/loan.AddInvestmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Investment added successfully
+          schema:
+            type: string
+        "400":
+          description: Invalid request or state validation error
+          schema:
+            type: string
+      summary: Add investment to loan
+      tags:
+      - loans
+  /loans/borrower/{borrowerId}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all loans associated with a borrower
+      parameters:
+      - description: Borrower ID
+        in: path
+        name: borrowerId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of loans" "List of loans
+          schema:
+            items:
+              $ref: '#/definitions/response.Response'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get loans by borrower
+      tags:
+      - loans
+  /loans/state/{state}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all loans in a specific state
+      parameters:
+      - description: Loan state
+        enum:
+        - PROPOSED
+        - APPROVED
+        - INVESTED
+        - DISBURSED
+        in: path
+        name: state
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of loans
+          schema:
+            items:
+              $ref: '#/definitions/response.Response'
+            type: array
+        "400":
+          description: Invalid state
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get loans by state
+      tags:
+      - loans
+swagger: "2.0"

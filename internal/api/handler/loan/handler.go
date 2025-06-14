@@ -12,6 +12,11 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// @title Loan API
+// @version 1.0
+// @description API for managing loans
+// @BasePath /loan
+
 // Handler handles HTTP requests for loan operations
 type Handler struct {
 	service   *loan.LoanService
@@ -23,7 +28,7 @@ func NewHandler(service *loan.LoanService) *Handler {
 	validate := validator.New()
 
 	// Register custom validation for loan state
-	validate.RegisterValidation("validLoanState", utils.ValidateLoanState)
+	_ = validate.RegisterValidation("validLoanState", utils.ValidateLoanState)
 
 	return &Handler{
 		service:   service,
@@ -68,6 +73,16 @@ type CreateLoanRequest struct {
 }
 
 // CreateLoan handles the creation of a new loan
+// @Summary Create a new loan
+// @Description Creates a new loan with the given borrower and loan details
+// @Tags loans
+// @Accept json
+// @Produce json
+// @Param request body CreateLoanRequest true "Loan creation request"
+// @Success 201 {object} response.Response "Loan created successfully"
+// @Failure 400 {object} response.Response "Invalid request or validation error"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /loans [post]
 func (h *Handler) CreateLoan(c echo.Context) error {
 	var req CreateLoanRequest
 	if err := c.Bind(&req); err != nil {
@@ -87,6 +102,15 @@ func (h *Handler) CreateLoan(c echo.Context) error {
 }
 
 // GetLoan handles retrieving a loan by ID
+// @Summary Get loan by ID
+// @Description Retrieves a loan by its ID
+// @Tags loans
+// @Accept json
+// @Produce json
+// @Param id path string true "Loan ID"
+// @Success 200 {object} response.Response "Loan details retrieved successfully"
+// @Failure 404 {object} response.Response "Loan not found"
+// @Router /loans/{id} [get]
 func (h *Handler) GetLoan(c echo.Context) error {
 	id := c.Param("id")
 
@@ -105,6 +129,16 @@ type ApproveLoanRequest struct {
 }
 
 // ApproveLoan handles the approval of a loan
+// @Summary Approve a loan
+// @Description Approves a loan with validator details
+// @Tags loans
+// @Accept json
+// @Produce json
+// @Param id path string true "Loan ID"
+// @Param request body ApproveLoanRequest true "Loan approval request"
+// @Success 200 {object} response.Response "Loan approved successfully"
+// @Failure 400 {object} response.Response "Invalid request or state validation error"
+// @Router /loans/{id}/approve [post]
 func (h *Handler) ApproveLoan(c echo.Context) error {
 	id := c.Param("id")
 
@@ -137,6 +171,16 @@ type AddInvestmentRequest struct {
 }
 
 // AddInvestment handles adding an investment to a loan
+// @Summary Add investment to loan
+// @Description Adds an investment to an existing loan
+// @Tags loans
+// @Accept json
+// @Produce json
+// @Param id path string true "Loan ID"
+// @Param request body AddInvestmentRequest true "Investment details"
+// @Success 200 {string} string "Investment added successfully"
+// @Failure 400 {string} string "Invalid request or state validation error"
+// @Router /loans/{id}/invest [post]
 func (h *Handler) AddInvestment(c echo.Context) error {
 	id := c.Param("id")
 
@@ -146,19 +190,19 @@ func (h *Handler) AddInvestment(c echo.Context) error {
 	}
 
 	if err := h.validator.Struct(req); err != nil {
-		return c.String(http.StatusBadRequest, "Validation error: "+err.Error())
+		return response.DefaultResponse(c, "Validation error", nil, err.Error(), http.StatusBadRequest)
 	}
 
 	// Validate loan state - must be APPROVED or INVESTED to add investment
 	if err := h.validateLoanStateForAction(id, domain.StateApproved, domain.StateInvested); err != nil {
-		return c.String(http.StatusBadRequest, "State validation error: "+err.Error())
+		return response.DefaultResponse(c, "State validation error", nil, err.Error(), http.StatusBadRequest)
 	}
 
 	if err := h.service.AddInvestment(id, req.InvestorID, req.Email, req.Amount); err != nil {
-		return c.String(http.StatusBadRequest, err.Error())
+		return response.DefaultResponse(c, "Failed to add investment", nil, err.Error(), http.StatusBadRequest)
 	}
 
-	return c.NoContent(http.StatusOK)
+	return response.DefaultResponse(c, "OK", req, nil, http.StatusOK)
 }
 
 // DisburseLoanRequest represents the request body for disbursing a loan
@@ -168,29 +212,38 @@ type DisburseLoanRequest struct {
 }
 
 // DisburseLoan handles the disbursement of a loan
+// @Description Disburses an approved and invested loan
+// @Tags loans
+// @Accept json
+// @Produce json
+// @Param id path string true "Loan ID"
+// @Param request body DisburseLoanRequest true "Disbursement details"
+// @Success 200 {string} string "Loan disbursed successfully"
+// @Failure 400 {string} string "Invalid request or state validation error"
+// @Router /loans/{id}/disburse [post]
 func (h *Handler) DisburseLoan(c echo.Context) error {
 
 	id := c.Param("id")
 
 	var req DisburseLoanRequest
 	if err := c.Bind(&req); err != nil {
-		return c.String(http.StatusBadRequest, "Invalid request body")
+		return response.DefaultResponse(c, "Invalid request body", nil, nil, http.StatusBadRequest)
 	}
 
 	if err := h.validator.Struct(req); err != nil {
-		return c.String(http.StatusBadRequest, "Validation error: "+err.Error())
+		return response.DefaultResponse(c, "Validation error", nil, err.Error(), http.StatusBadRequest)
 	}
 
 	// Validate loan state - must be INVESTED to be disbursed
 	if err := h.validateLoanStateForAction(id, domain.StateInvested); err != nil {
-		return c.String(http.StatusBadRequest, "State validation error: "+err.Error())
+		return response.DefaultResponse(c, "State validation error", nil, err.Error(), http.StatusBadRequest)
 	}
 
 	if err := h.service.DisburseLoan(id, req.FieldOfficerID, req.SignedAgreement); err != nil {
-		return c.String(http.StatusBadRequest, err.Error())
+		return response.DefaultResponse(c, "Failed to disburse loan", nil, err.Error(), http.StatusBadRequest)
 	}
 
-	return c.NoContent(http.StatusOK)
+	return response.DefaultResponse(c, "OK", req, nil, http.StatusOK)
 }
 
 // GenerateAgreementLetterRequest represents the request body for generating an agreement letter
@@ -199,35 +252,54 @@ type GenerateAgreementLetterRequest struct {
 }
 
 // GenerateAgreementLetter handles generating an agreement letter for a loan
+// @Summary Generate agreement letter
+// @Description Generates an agreement letter for a loan
+// @Tags loans
+// @Accept json
+// @Produce json
+// @Param id path string true "Loan ID"
+// @Param request body GenerateAgreementLetterRequest true "Agreement letter details"
+// @Success 200 {string} string "Agreement letter generated successfully"
+// @Failure 400 {string} string "Invalid request"
+// @Router /loans/{id}/agreement [post]
 func (h *Handler) GenerateAgreementLetter(c echo.Context) error {
 	id := c.Param("id")
 
 	var req GenerateAgreementLetterRequest
 	if err := c.Bind(&req); err != nil {
-		return c.String(http.StatusBadRequest, "Invalid request body")
+		return response.DefaultResponse(c, "Invalid request body", nil, nil, http.StatusBadRequest)
 	}
 
 	if err := h.validator.Struct(req); err != nil {
-		return c.String(http.StatusBadRequest, "Validation error: "+err.Error())
+		return response.DefaultResponse(c, "Validation error", nil, err.Error(), http.StatusBadRequest)
 	}
 
 	if err := h.service.GenerateAgreementLetter(id, req.LetterURL); err != nil {
-		return c.String(http.StatusBadRequest, err.Error())
+		return response.DefaultResponse(c, "Failed to generate agreement letter", nil, err.Error(), http.StatusBadRequest)
 	}
-	return c.NoContent(http.StatusOK)
+	return response.DefaultResponse(c, "OK", nil, nil, http.StatusOK)
 }
 
 // GetLoansByBorrower handles retrieving all loans for a borrower
+// @Summary Get loans by borrower
+// @Description Retrieves all loans associated with a borrower
+// @Tags loans
+// @Accept json
+// @Produce json
+// @Param borrowerId path string true "Borrower ID"
+// @Success 200 {array} response.Response "List of loans" "List of loans"
+// @Failure 500 {string} string "Internal server error"
+// @Router /loans/borrower/{borrowerId} [get]
 func (h *Handler) GetLoansByBorrower(c echo.Context) error {
 
 	borrowerId := c.Param("borrowerId")
 
 	loans, err := h.service.GetLoansByBorrower(borrowerId)
 	if err != nil {
-		return c.String(http.StatusInternalServerError, err.Error())
+		return response.DefaultResponse(c, "Failed to retrieve loans", nil, err.Error(), http.StatusInternalServerError)
 	}
 
-	return c.JSON(http.StatusOK, loans)
+	return response.DefaultResponse(c, "OK", loans, nil, http.StatusOK)
 }
 
 // GetLoansByStateRequest represents the request for retrieving loans by state
@@ -236,6 +308,16 @@ type GetLoansByStateRequest struct {
 }
 
 // GetLoansByState handles retrieving all loans in a specific state
+// @Summary Get loans by state
+// @Description Retrieves all loans in a specific state
+// @Tags loans
+// @Accept json
+// @Produce json
+// @Param state path string true "Loan state" Enums(PROPOSED, APPROVED, INVESTED, DISBURSED)
+// @Success 200 {array} response.Response "List of loans"
+// @Failure 400 {string} string "Invalid state"
+// @Failure 500 {string} string "Internal server error"
+// @Router /loans/state/{state} [get]
 func (h *Handler) GetLoansByState(c echo.Context) error {
 	stateStr := c.Param("state")
 
@@ -244,13 +326,13 @@ func (h *Handler) GetLoansByState(c echo.Context) error {
 	}
 
 	if err := h.validator.Struct(req); err != nil {
-		return c.String(http.StatusBadRequest, "Validation error: "+err.Error())
+		return response.DefaultResponse(c, "Validation error", nil, err.Error(), http.StatusBadRequest)
 	}
 
 	loans, err := h.service.GetLoansByState(req.State)
 	if err != nil {
-		return c.String(http.StatusInternalServerError, err.Error())
+		return response.DefaultResponse(c, "Failed to retrieve loans", nil, err.Error(), http.StatusInternalServerError)
 	}
 
-	return c.JSON(http.StatusOK, loans)
+	return response.DefaultResponse(c, "OK", loans, nil, http.StatusOK)
 }
