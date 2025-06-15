@@ -12,10 +12,10 @@ func TestValidateLoanState(t *testing.T) {
 		state string
 		want  bool
 	}{
-		{"valid proposed state", "proposed", true},
-		{"valid approved state", "approved", true},
-		{"valid invested state", "invested", true},
-		{"valid disbursed state", "disbursed", true},
+		{"valid proposed state", "PROPOSED", true},
+		{"valid approved state", "APPROVED", true},
+		{"valid invested state", "INVESTED", true},
+		{"valid disbursed state", "DISBURSED", true},
 		{"invalid state", "invalid", false},
 		{"empty state", "", false},
 	}
