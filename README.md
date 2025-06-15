@@ -142,6 +142,8 @@ To run the tests:
 
 ```
 go test ./...
+or
+go test ./... -cover -v -covermode=count -coverprofile=coverage.out 2>&1
 ```
 
 ### Generating Swagger Documentation
