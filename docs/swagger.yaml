@@ -3,60 +3,71 @@ definitions:
   loan.AddInvestmentRequest:
     properties:
       amount:
+        example: 100000
         type: number
       email:
+        example: client@mail.com
         type: string
-      investorId:
+      investor_id:
+        example: investor-001
         type: string
     required:
     - amount
     - email
-    - investorId
+    - investor_id
     type: object
   loan.ApproveLoanRequest:
     properties:
-      proofUrl:
+      proof_url:
+        example: https://storage.your.com/loan-proof/visit123.jpeg
         type: string
-      validatorId:
+      validator_id:
+        example: LOS-123
         type: string
     required:
-    - proofUrl
-    - validatorId
+    - proof_url
+    - validator_id
     type: object
   loan.CreateLoanRequest:
     properties:
-      borrowerId:
+      borrower_id:
+        example: amr-001
         type: string
-      principalAmount:
+      principal_amount:
+        example: 1000000
         type: number
       rate:
+        example: 12.5
         minimum: 0
         type: number
       roi:
+        example: 10
         minimum: 0
         type: number
     required:
-    - borrowerId
-    - principalAmount
+    - borrower_id
+    - principal_amount
     - rate
     - roi
     type: object
   loan.DisburseLoanRequest:
     properties:
-      fieldOfficerId:
+      field_officer_id:
+        example: OFC-001
         type: string
-      signedAgreement:
+      signed_agreement:
+        example: https://storage.your.com/loan-agreement/signed123.pdf
         type: string
     required:
-    - fieldOfficerId
-    - signedAgreement
+    - field_officer_id
+    - signed_agreement
     type: object
   loan.GenerateAgreementLetterRequest:
     properties:
-      letterUrl:
+      letter_url:
         type: string
     required:
-    - letterUrl
+    - letter_url
     type: object
   response.Response:
     properties:
@@ -79,6 +90,35 @@ info:
   version: "1.0"
 paths:
   /loans:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all loans with pagination
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Number of items per page (default: 10)'
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of loans
+          schema:
+            items:
+              $ref: '#/definitions/response.Response'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Get all loans
+      tags:
+      - loans
     post:
       consumes:
       - application/json
