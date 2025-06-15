@@ -18,7 +18,8 @@ coverage.*
 profile.cov
 
 # Dependency directories (remove the comment below to include it)
-# vendor/
+vendor/
+node_modules/
 
 # Go workspace file
 go.work
@@ -30,3 +31,4 @@ go.work.sum
 # Editor/IDE
 .idea/
 .vscode/
+/automation/regression/cypress/screenshots/
