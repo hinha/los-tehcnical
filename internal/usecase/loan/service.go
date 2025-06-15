@@ -11,20 +11,15 @@ import (
 	"github.com/hinha/los-technical/internal/pkg/utils"
 )
 
-// EmailSender defines the interface for sending emails
-type EmailSender interface {
-	SendAgreementEmail(email, loanID, agreementURL string) error
-}
-
 // LoanService handles loan business logic
 type LoanService struct {
 	repo        domain.LoanRepository
-	emailSender EmailSender
+	emailSender domain.EmailSender
 	logger      *logrus.Logger
 }
 
 // NewLoanService creates a new loan service
-func NewLoanService(repo domain.LoanRepository, emailSender EmailSender, logger *logrus.Logger) *LoanService {
+func NewLoanService(repo domain.LoanRepository, emailSender domain.EmailSender, logger *logrus.Logger) domain.Service {
 	return &LoanService{
 		repo:        repo,
 		emailSender: emailSender,
@@ -473,6 +468,47 @@ func (s *LoanService) GetLoansByState(state domain.LoanState) ([]*domain.Loan, e
 		"layer":    "service",
 		"function": "GetLoansByState",
 		"state":    state,
+		"count":    len(loans),
+	}).Info("Loans retrieved successfully")
+	return loans, nil
+}
+
+// GetLoans retrieves all loans with pagination
+func (s *LoanService) GetLoans(page, limit int) ([]*domain.Loan, error) {
+	s.logger.WithFields(logrus.Fields{
+		"layer":    "service",
+		"function": "GetLoans",
+		"page":     page,
+		"limit":    limit,
+	}).Info("Retrieving all loans with pagination")
+
+	// Default page to 1 if it's less than 1
+	if page < 1 {
+		page = 1
+	}
+
+	// Default limit to 10 if it's less than 1
+	if limit < 1 {
+		limit = 10
+	}
+
+	loans, err := s.repo.FindAll(page, limit)
+	if err != nil {
+		s.logger.WithFields(logrus.Fields{
+			"layer":    "service",
+			"function": "GetLoans",
+			"page":     page,
+			"limit":    limit,
+			"error":    err.Error(),
+		}).Error("Failed to find loans")
+		return nil, err
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"layer":    "service",
+		"function": "GetLoans",
+		"page":     page,
+		"limit":    limit,
 		"count":    len(loans),
 	}).Info("Loans retrieved successfully")
 	return loans, nil
