@@ -35,13 +35,21 @@ func (r *InMemoryRepository) Save(loan *domain.Loan) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	if _, exists := r.loans[loan.ID]; exists {
+	var foundLoan bool
+	for _, existingLoan := range r.loans {
+		if existingLoan.BorrowerID == loan.BorrowerID {
+			foundLoan = true
+			break
+		}
+	}
+
+	if foundLoan {
 		r.logger.WithFields(logrus.Fields{
 			"layer":    "repository",
 			"function": "Save",
 			"loan_id":  loan.ID,
 		}).Error("Loan already exists")
-		return fmt.Errorf("loan with ID %s already exists", loan.ID)
+		return fmt.Errorf("loan with ID %s already exists", loan.BorrowerID)
 	}
 
 	r.loans[loan.ID] = loan
@@ -162,5 +170,57 @@ func (r *InMemoryRepository) FindByState(state domain.LoanState) ([]*domain.Loan
 		"state":    state,
 		"count":    len(result),
 	}).Info("Found loans by state")
+	return result, nil
+}
+
+// FindAll retrieves all loans with pagination
+func (r *InMemoryRepository) FindAll(page, limit int) ([]*domain.Loan, error) {
+	r.logger.WithFields(logrus.Fields{
+		"layer":    "repository",
+		"function": "FindAll",
+		"page":     page,
+		"limit":    limit,
+	}).Info("Finding all loans with pagination")
+
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	// Convert map to slice
+	var allLoans []*domain.Loan
+	for _, loan := range r.loans {
+		allLoans = append(allLoans, loan)
+	}
+
+	// Calculate pagination
+	startIndex := (page - 1) * limit
+	endIndex := startIndex + limit
+
+	// Check if startIndex is out of bounds
+	if startIndex >= len(allLoans) {
+		r.logger.WithFields(logrus.Fields{
+			"layer":    "repository",
+			"function": "FindAll",
+			"page":     page,
+			"limit":    limit,
+			"count":    0,
+		}).Info("No loans found for the given page")
+		return []*domain.Loan{}, nil
+	}
+
+	// Check if endIndex is out of bounds
+	if endIndex > len(allLoans) {
+		endIndex = len(allLoans)
+	}
+
+	// Get the paginated result
+	result := allLoans[startIndex:endIndex]
+
+	r.logger.WithFields(logrus.Fields{
+		"layer":    "repository",
+		"function": "FindAll",
+		"page":     page,
+		"limit":    limit,
+		"count":    len(result),
+	}).Info("Found loans with pagination")
 	return result, nil
 }

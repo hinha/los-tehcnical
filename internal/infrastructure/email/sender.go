@@ -1,8 +1,6 @@
 package email
 
 import (
-	"fmt"
-
 	"github.com/sirupsen/logrus"
 )
 
@@ -35,29 +33,29 @@ func (s *ConsoleEmailSender) SendAgreementEmail(email, loanID, agreementURL stri
 }
 
 // PDFGenerator generates PDF agreement letters
-type PDFGenerator struct {
-	logger *logrus.Logger
-}
-
-// NewPDFGenerator creates a new PDF generator
-func NewPDFGenerator(logger *logrus.Logger) *PDFGenerator {
-	return &PDFGenerator{
-		logger: logger,
-	}
-}
-
-// GenerateAgreementLetter generates a PDF agreement letter for a loan
-func (g *PDFGenerator) GenerateAgreementLetter(loanID string) (string, error) {
-	// In a real implementation, this would generate an actual PDF
-	// For now, just return a fake URL
-
-	pdfURL := fmt.Sprintf("https://asia-southeast2-dummy.cloudfunctions.net/agreements/%s.pdf", loanID)
-	g.logger.WithFields(logrus.Fields{
-		"layer":    "email",
-		"function": "GenerateAgreementLetter",
-		"loan_id":  loanID,
-		"pdf_url":  pdfURL,
-	}).Info("Generated agreement letter")
-
-	return pdfURL, nil
-}
+//type PDFGenerator struct {
+//	logger *logrus.Logger
+//}
+//
+//// NewPDFGenerator creates a new PDF generator
+//func NewPDFGenerator(logger *logrus.Logger) *PDFGenerator {
+//	return &PDFGenerator{
+//		logger: logger,
+//	}
+//}
+//
+//// GenerateAgreementLetter generates a PDF agreement letter for a loan
+//func (g *PDFGenerator) GenerateAgreementLetter(loanID string) (string, error) {
+//	// In a real implementation, this would generate an actual PDF
+//	// For now, just return a fake URL
+//
+//	pdfURL := fmt.Sprintf("https://asia-southeast2-dummy.cloudfunctions.net/agreements/%s.pdf", loanID)
+//	g.logger.WithFields(logrus.Fields{
+//		"layer":    "email",
+//		"function": "GenerateAgreementLetter",
+//		"loan_id":  loanID,
+//		"pdf_url":  pdfURL,
+//	}).Info("Generated agreement letter")
+//
+//	return pdfURL, nil
+//}
