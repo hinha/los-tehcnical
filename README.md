@@ -144,6 +144,12 @@ To run the tests:
 go test ./...
 ```
 
+### Generating Swagger Documentation
+
+```bash
+swag init -g cmd/api/main.go -o docs
+```
+
 ### Adding New Features
 
 When adding new features:
