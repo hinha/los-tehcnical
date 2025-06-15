@@ -2,13 +2,13 @@ package loan
 
 import (
 	"errors"
-	"github.com/hinha/los-technical/internal/domain/response"
 	"net/http"
+	"strconv"
 
 	"github.com/go-playground/validator/v10"
 	domain "github.com/hinha/los-technical/internal/domain/loan"
+	"github.com/hinha/los-technical/internal/domain/response"
 	"github.com/hinha/los-technical/internal/pkg/utils"
-	"github.com/hinha/los-technical/internal/usecase/loan"
 	"github.com/labstack/echo/v4"
 )
 
@@ -19,12 +19,12 @@ import (
 
 // Handler handles HTTP requests for loan operations
 type Handler struct {
-	service   *loan.LoanService
+	service   domain.Service
 	validator *validator.Validate
 }
 
 // NewHandler creates a new loan handler
-func NewHandler(service *loan.LoanService) *Handler {
+func NewHandler(service domain.Service) *Handler {
 	validate := validator.New()
 
 	// Register custom validation for loan state
@@ -55,6 +55,7 @@ func (h *Handler) validateLoanStateForAction(loanID string, requiredStates ...do
 // RegisterRoutes registers the loan API routes
 func (h *Handler) RegisterRoutes(e *echo.Echo) {
 	e.POST("/loans", h.CreateLoan)
+	e.GET("/loans", h.GetLoans)
 	e.GET("/loans/:id", h.GetLoan)
 	e.POST("/loans/:id/approve", h.ApproveLoan)
 	e.POST("/loans/:id/invest", h.AddInvestment)
@@ -66,10 +67,10 @@ func (h *Handler) RegisterRoutes(e *echo.Echo) {
 
 // CreateLoanRequest represents the request body for creating a loan
 type CreateLoanRequest struct {
-	BorrowerID      string  `json:"borrowerId" validate:"required"`
-	PrincipalAmount float64 `json:"principalAmount" validate:"required,gt=0"`
-	Rate            float64 `json:"rate" validate:"required,gte=0"`
-	ROI             float64 `json:"roi" validate:"required,gte=0"`
+	BorrowerID      string  `json:"borrower_id" validate:"required" example:"amr-001"`
+	PrincipalAmount float64 `json:"principal_amount" validate:"required,gt=0" example:"1000000"`
+	Rate            float64 `json:"rate" validate:"required,gte=0" example:"12.5"`
+	ROI             float64 `json:"roi" validate:"required,gte=0" example:"10"`
 }
 
 // CreateLoan handles the creation of a new loan
@@ -124,8 +125,8 @@ func (h *Handler) GetLoan(c echo.Context) error {
 
 // ApproveLoanRequest represents the request body for approving a loan
 type ApproveLoanRequest struct {
-	ValidatorID string `json:"validatorId" validate:"required"`
-	ProofURL    string `json:"proofUrl" validate:"required"`
+	ValidatorID string `json:"validator_id" validate:"required" example:"LOS-123"`
+	ProofURL    string `json:"proof_url" validate:"required" example:"https://storage.your.com/loan-proof/visit123.jpeg"`
 }
 
 // ApproveLoan handles the approval of a loan
@@ -165,9 +166,9 @@ func (h *Handler) ApproveLoan(c echo.Context) error {
 
 // AddInvestmentRequest represents the request body for adding an investment
 type AddInvestmentRequest struct {
-	InvestorID string  `json:"investorId" validate:"required"`
-	Email      string  `json:"email" validate:"required,email"`
-	Amount     float64 `json:"amount" validate:"required,gt=0"`
+	InvestorID string  `json:"investor_id" validate:"required" example:"investor-001"`
+	Email      string  `json:"email" validate:"required,email" example:"client@mail.com"`
+	Amount     float64 `json:"amount" validate:"required,gt=0" example:"100000"`
 }
 
 // AddInvestment handles adding an investment to a loan
@@ -207,8 +208,8 @@ func (h *Handler) AddInvestment(c echo.Context) error {
 
 // DisburseLoanRequest represents the request body for disbursing a loan
 type DisburseLoanRequest struct {
-	FieldOfficerID  string `json:"fieldOfficerId" validate:"required"`
-	SignedAgreement string `json:"signedAgreement" validate:"required"`
+	FieldOfficerID  string `json:"field_officer_id" validate:"required" example:"OFC-001"`
+	SignedAgreement string `json:"signed_agreement" validate:"required" example:"https://storage.your.com/loan-agreement/signed123.pdf"`
 }
 
 // DisburseLoan handles the disbursement of a loan
@@ -248,7 +249,7 @@ func (h *Handler) DisburseLoan(c echo.Context) error {
 
 // GenerateAgreementLetterRequest represents the request body for generating an agreement letter
 type GenerateAgreementLetterRequest struct {
-	LetterURL string `json:"letterUrl" validate:"required"`
+	LetterURL string `json:"letter_url" validate:"required"`
 }
 
 // GenerateAgreementLetter handles generating an agreement letter for a loan
@@ -330,6 +331,48 @@ func (h *Handler) GetLoansByState(c echo.Context) error {
 	}
 
 	loans, err := h.service.GetLoansByState(req.State)
+	if err != nil {
+		return response.DefaultResponse(c, "Failed to retrieve loans", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	return response.DefaultResponse(c, "OK", loans, nil, http.StatusOK)
+}
+
+// GetLoans handles retrieving all loans with pagination
+// @Summary Get all loans
+// @Description Retrieves all loans with pagination
+// @Tags loans
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number (default: 1)"
+// @Param limit query int false "Number of items per page (default: 10)"
+// @Success 200 {array} response.Response "List of loans"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /loans [get]
+func (h *Handler) GetLoans(c echo.Context) error {
+	// Parse page parameter
+	pageStr := c.QueryParam("page")
+	page := 1 // Default page
+	if pageStr != "" {
+		var err error
+		page, err = strconv.Atoi(pageStr)
+		if err != nil || page < 1 {
+			page = 1
+		}
+	}
+
+	// Parse limit parameter
+	limitStr := c.QueryParam("limit")
+	limit := 10 // Default limit
+	if limitStr != "" {
+		var err error
+		limit, err = strconv.Atoi(limitStr)
+		if err != nil || limit < 1 {
+			limit = 10
+		}
+	}
+
+	loans, err := h.service.GetLoans(page, limit)
 	if err != nil {
 		return response.DefaultResponse(c, "Failed to retrieve loans", nil, err.Error(), http.StatusInternalServerError)
 	}
